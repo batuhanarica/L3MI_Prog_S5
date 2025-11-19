@@ -9,13 +9,19 @@
 typedef int32_t lit;
 typedef int16_t var;
 
+typedef struct WatchNode WatchNode;
+
 typedef struct Variable {
     int8_t assign; // -1 unassigned, 0 false, 1 true
+    WatchNode* pos;
+    WatchNode* nega;
 } Variable;
 
 typedef struct Clause {
     size_t size;
-    lit lits[];
+    size_t wid1;   // indice1 literale surveille
+    size_t wid2;   // indice2 litterale surveille
+    lit lits[];    
 } Clause;
 
 typedef struct Formula {
@@ -30,6 +36,13 @@ typedef struct Formula {
     size_t nassigned;
 } Formula;
 
+typedef struct WatchNode {
+    Clause* clause;
+    WatchNode* next;
+    size_t lit_idx;
+} WatchNode;
+
+
 /**
  * Fonction pour allouer et intialiser une Clause.
  * @param size le nombre de littÃ©raux dans la clause
@@ -38,23 +51,30 @@ typedef struct Formula {
  */
 Clause* clause_new(size_t size, lit lits[static size]){
 
-    //Create pointer to clause and if not created return NULL
-    Clause* c = malloc(sizeof(Clause));
-    if (!c){return NULL;}
+    // Allocation d'un bloc unique pour Clause + lits[]
+    Clause* c = malloc(sizeof(Clause) + size * sizeof(lit));
+    if (!c) {perror("malloc c"); return NULL;}
 
-    //Create place for lits and if not return NULL
     c->size = size;
-    c->lits = malloc(size*sizeof(lit));
-    if(!c->lits){free(c);return NULL;};
+
+    // Choix automatique des deux premiers littéraux
+    if (size < 2) {
+        c->wid1 = 0;
+        c->wid2 = 0;
+    } else if (lits[0] == lits[1]) {
+        c->wid1 = 0;
+        c->wid2 = 0;
+    } else {
+        c->wid1 = 0;
+        c->wid2 = 1;
+    }
 
     //Put lits in clause c
-    for(size_t i = 0 ; i < size ; i++){
+    for (size_t i = 0; i < size; i++)
         c->lits[i] = lits[i];
-    }
+
     return c;
-
-
-};
+}
 
 /**
  * Fonction pour allouer et intialiser une Formule.
@@ -62,48 +82,104 @@ Clause* clause_new(size_t size, lit lits[static size]){
  * @param nvars le nombre de variables utilisÃ©es dans la formule
  * @return un pointeur var la formule crÃ©Ã©e
  */
-Formula* formula_new(size_t nvars){
 
+Formula* formula_new(size_t nvars){
     //Create the pointer for formula and if not return NULL
     Formula* f = malloc(sizeof(Formula));
-    if (!f){return NULL;}
-
-    //Init of needed params
+    if (!f) {perror("malloc f"); return NULL;}
+     //Init of needed params
     f->nvars = nvars;
     f->nclauses = 0;
     f->capacity = CAPACITY;
 
     //Create clauses of formula in size of capacity(10 by question) and if not return NULL
-    f->clauses = (Clause**)malloc(f->capacity * sizeof(Clause*));
-    if(!f->clauses){free(f);return NULL;};
+    f->clauses = malloc(f->capacity * sizeof(Clause*));
+    if (!f->clauses) { free(f); return NULL; }
+
+    
+    f->vars = malloc((nvars + 1) * sizeof(Variable));
+
+    if (!f->vars) {
+        free(f->clauses);
+        free(f);
+        perror("malloc f->vars");
+        return NULL;
+    }
+
+    // Initialisation des variables
+    for (size_t i = 0; i <= nvars; i++) {
+        f->vars[i].assign = -1;
+        f->vars[i].pos = NULL;
+        f->vars[i].nega = NULL;
+    }
 
     //Create assigned ta of formula in size of nb of variables and if not return NULL
-    f->assigned = (var*)malloc(nvars*sizeof(var));
-    if(!f->assigned){free(f->clauses);free(f);return NULL;};
+    f->assigned = (var*)malloc(nvars * sizeof(var));
+    if (!f->assigned) {
+        free(f->vars);
+        free(f->clauses);
+        free(f);
+        perror("malloc f->assigned");
+        return NULL;
+    }
 
     f->nassigned = (size_t)0;
-
     return f;
-};
+}
 
 /**
  * Libère la mémoire allouée pour une formule et ses clauses.
  * @param f le pointeur vers la formule à libérer
  */
 void formula_free(Formula* f){
-    if(!f){ printf(("ERROR: F est vide "));return;}
+    if(!f){ perror(("ERROR: F est vide "));return;}
 
     //For make free the memory of clauses
-    for(size_t i = 0 ; i < f->nclauses; i++){
+    for (size_t i = 0; i < f->nclauses; i++) {
         Clause* c = f->clauses[i];
         if(c){
             free(c);
         }
     }
 
-    //Free other params
     free(f->clauses);
+    free(f->assigned);
+    free(f->vars);             
     free(f);
+}
+
+
+/**
+ * Ajoute une clause à la formule.
+ * Si la capacité de la formule est atteinte, elle est augmentée.
+ * @param f le pointeur vers la formule
+ * @param c le pointeur vers la clause à ajouter
+ */
+
+void formula_add_clause(Formula* f, Clause* c){
+    //Check if formula f and clause c are not NULL
+    if(!c){ perror("ERROR: C est vide "); return;}
+    if(!f){
+        perror("ERROR: formula NULL\n");
+        return;
+    }
+    
+    //Check if we need to increase capacity
+    if(f->nclauses >= f->capacity){
+        f->capacity += CAPACITY;
+        f->clauses = realloc(f->clauses, f->capacity * sizeof(Clause*));
+        if (!f->clauses) {
+            perror("realloc f->clauses");
+            return;
+        }
+    }
+
+     //Add clause c to formula f
+    f->clauses[f->nclauses] = c;
+    f->nclauses += 1;
+    
+
+    return;
 }
 
 
@@ -115,7 +191,7 @@ void formula_free(Formula* f){
  */
 void formula_add_clause(Formula* f, Clause* c){
     //Check if formula f and clause c are not NULL
-    if(!c){ printf("ERROR: C est vide "); return;}
+    if(!c){ perror("ERROR: C est vide "); return;}
     if(!f){
         f = formula_new(0);
         f->clauses[0] = c;
@@ -145,7 +221,7 @@ void formula_add_clause(Formula* f, Clause* c){
  */
 int8_t lit_eval(Formula* f, lit l){
     //Check if f is NULL
-    if(!f){printf("ERROR: Formula nulle");return;}
+    if(!f){perror("ERROR: Formula nulle");return;}
 
     //Check is anything is assigned
     if(f->nassigned == 0){return -1;}
@@ -179,10 +255,10 @@ int8_t clause_eval(Formula* f, Clause* c){
     //TODO: Verify if we should put -1 in case of error
 
     //Check if c is NULL
-    if(!c){printf("ERROR: Clause nulle");return -1;}
+    if(!c){perror("ERROR: Clause nulle");return -1;}
 
     //Check if f is NULL
-    if(!f){printf("ERROR: Formula nulle");return -1;}
+    if(!f){perror("ERROR: Formula nulle");return -1;}
 
     //Check each literal in clause c
     bool has_unassigned = false;
@@ -209,7 +285,7 @@ int8_t clause_eval(Formula* f, Clause* c){
  */
 bool formula_eval(Formula* f){
     //Check if f is NULL
-    if(!f){printf("ERROR: Formula nulle");return false;}
+    if(!f){perror("ERROR: Formula nulle");return false;}
 
     //Check each clause in formula f
     for(size_t i = 0 ; i < f->nclauses ; i++){

@@ -506,7 +506,7 @@ void backtrack(Formula* f, var v) {
         for (index = i; index < f->nassigned; index++) {
 
             varsup = f->assigned[index];
-            variablesup = f->vars[varsup];
+            variablesup = &f->vars[varsup];
             variablesup->assign = -1;
         }
 

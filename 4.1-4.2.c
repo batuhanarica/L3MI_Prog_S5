@@ -485,27 +485,41 @@ bool propagate(Formula* f, size_t from) {
     // Si on n'a détecté aucun conflit
     return true;
 }
-backtrack(Formula* f, var v){
-        if (!f) return false;  
+bool backtrack(Formula* f, var v) {
 
-        while (i<f->nassigned && f->assigned[i]!=v){
-            i=i+1;
+    if (!f) return false;
+
+    int i = 0;
+    int index;
+    var varsup;
+    Variable* variablesup;
+
+    // Chercher v dans les variables déjà assignées
+    while (i < f->nassigned && f->assigned[i] != v) {
+        i = i + 1;
+    }
+
+    // Si la variable a été trouvée
+    if (i < f->nassigned) {
+
+        // Désassigner toutes les variables à partir de i
+        for (index = i; index < f->nassigned; index++) {
+
+            varsup = f->assigned[index];
+            variablesup = f->vars[varsup];
+            variablesup->assign = -1;
         }
-        if (i<f->nassigned){
-            for (index=i;index<nassigned;index++){
 
-                varsup=f->assigned[i];
-                variablesup=f->vars[varsup];
-                variablesup->assign=-1;
+        // Mettre à jour le compteur d’assignations
+        f->nassigned = i;
 
+        return true;
+    }
 
-                            
-            }
-            f->nassigned = i;
-        }
-        else{
-        printf("la variable na jamais etait assigner\n")
-        }
+    // Sinon
+    printf("La variable n'a jamais ete assignee\n");
+    return false;
+}
 
 }
 

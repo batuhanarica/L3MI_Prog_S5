@@ -485,9 +485,9 @@ bool propagate(Formula* f, size_t from) {
     // Si on n'a détecté aucun conflit
     return true;
 }
-bool backtrack(Formula* f, var v) {
+void backtrack(Formula* f, var v) {
 
-    if (!f) return false;
+    if (!f) return;
 
     int i = 0;
     int index;
@@ -510,18 +510,20 @@ bool backtrack(Formula* f, var v) {
             variablesup->assign = -1;
         }
 
-        // Mettre à jour le compteur d’assignations
+        // Réduire le compteur d’assignations
         f->nassigned = i;
 
-        return true;
+    } else {
+
+        // Sinon, message d'erreur
+        printf("La variable n'a jamais ete assignee\n");
     }
 
-    // Sinon
-    printf("La variable n'a jamais ete assignee\n");
-    return false;
+    return;
 }
 
-}
+
+
 
 
 

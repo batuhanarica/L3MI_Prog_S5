@@ -1,5 +1,5 @@
 
-// #include "sat_q1.h"
+ #include "sat_q1.h"
 #include "sat_q1.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -413,6 +413,102 @@ void update_watched(Formula* f, var v){
         node = node->next;
     }
 }
+#include <stdbool.h>
+#include <stddef.h>
+
+bool propagate(Formula* f, size_t from) {
+    if (!f) return false; // sécurité
+
+    // Parcourir la pile des assignations depuis l'indice 'from'
+    for (size_t idx = from; idx < f->nassigned; idx++) {
+        var v = f->assigned[idx];
+
+        // Mettre à jour les littéraux positifs de v
+        WatchNode* node = f->vars[v].pos;
+        while (node) {
+            Clause* c = node->clause;
+            size_t lit_idx = node->lit_idx;
+
+            int8_t val = lit_eval(f, c->lits[lit_idx]);
+
+            if (val != 1) { // le littéral n'est pas vrai → on cherche à le remplacer
+                bool replaced = false;
+                for (size_t i = 0; i < c->size; i++) {
+                    if (i != c->wid1 && i != c->wid2) {
+                        int8_t eval = lit_eval(f, c->lits[i]);
+                        if (eval != 0) { // non faux
+                            if (c->wid1 == lit_idx) c->wid1 = i;
+                            else c->wid2 = i;
+                            replaced = true;
+                            break;
+                        }
+                    }
+                }
+                if (!replaced) {
+                    int8_t clause_val = clause_eval(f, c);
+                    if (clause_val == 0) return false; // conflit détecté
+                }
+            }
+            node = node->next;
+        }
+
+        // Mettre à jour les littéraux négatifs de v
+        node = f->vars[v].nega;
+        while (node) {
+            Clause* c = node->clause;
+            size_t lit_idx = node->lit_idx;
+
+            int8_t val = lit_eval(f, c->lits[lit_idx]);
+
+            if (val != 1) {
+                bool replaced = false;
+                for (size_t i = 0; i < c->size; i++) {
+                    if (i != c->wid1 && i != c->wid2) {
+                        int8_t eval = lit_eval(f, c->lits[i]);
+                        if (eval != 0) {
+                            if (c->wid1 == lit_idx) c->wid1 = i;
+                            else c->wid2 = i;
+                            replaced = true;
+                            break;
+                        }
+                    }
+                }
+                if (!replaced) {
+                    int8_t clause_val = clause_eval(f, c);
+                    if (clause_val == 0) return false; // conflit détecté
+                }
+            }
+            node = node->next;
+        }
+    }
+
+    // Si on n'a détecté aucun conflit
+    return true;
+}
+backtrack(Formula* f, var v){
+        if (!f) return false;  
+
+        while (i<f->nassigned && f->assigned[i]!=v){
+            i=i+1;
+        }
+        if (i<f->nassigned){
+            for (index=i;index<nassigned;index++){
+
+                varsup=f->assigned[i];
+                variablesup=f->vars[varsup];
+                variablesup->assign=-1;
+
+
+                            
+            }
+            f->nassigned = i;
+        }
+        else{
+        printf("la variable na jamais etait assigner\n")
+        }
+
+}
+
 
 
 /////////////////////

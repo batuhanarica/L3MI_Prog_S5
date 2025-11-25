@@ -329,7 +329,43 @@ bool assign(Formula* f, var v, bool value){
     return true;
 };
 
-bool formula_naive_solve(Formula* f);
+/**
+ * Naively attempts to solve a boolean formula by trying all possible variable assignments.
+ *
+ * @param f A pointer to the Formula structure to be solved.
+ * @return true if a satisfying assignment is found (the formula evaluates to true).
+ * @return false if no satisfying assignment exists after checking all combinations,
+ *         or if the input formula pointer is NULL.
+ * @note The complexity is O(2^n), where n is the number of variables (f->nvars).
+ *       This is only feasible for small values of n (typically n < 64 due to the use of uint64_t).
+ * @warning Prints an error message to stderr if the formula pointer is NULL or if an
+ *          assignment conflict occurs.
+ */
+bool formula_naive_solve(Formula* f){
+    //Check if f is NULL
+    if(!f){perror("ERROR: Formula nulle");return false;}
+
+    for (uint64_t i = 0; i < (1ULL << f->nvars); i++) {
+        //Reset assignments
+        f->nassigned = 0;
+        for (size_t j = 0; j <= f->nvars; j++) {
+            f->vars[j].assign = -1;
+        }
+
+        //Assign values to variables based on bits of i
+        for(size_t v = 1 ; v <= f->nvars ; v++){
+            bool value = (i & (1ULL << (v - 1))) != 0;
+            if(!assign(f, v, value)){
+                perror("Conflict in assignment\n");
+                return false;
+            }
+            if(formula_eval(f)){
+                return true; //Formula is satisfied
+            }
+        }
+    }
+    return false; //No satisfying assignment found
+};
 
 /////////////////////
 // Fonctions d'E/S

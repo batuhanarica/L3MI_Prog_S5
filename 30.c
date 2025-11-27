@@ -708,7 +708,36 @@ Formula* read_cnf(const char* fname)
 }
 
 
+void test_naive(Formula *f){
+    if (formula_naive_solve(f)) {
+        printf("Solution trouvée avec naive solve:\n");
+        for (var i = 1; i <= f->nvars; i++) {
+            printf("x %d=%d ", i, f->vars[i].assign);
+        }
+        printf("\n");
+    } else {
+        printf("Formule insatisfiable avec naive solve\n");
+    }
+}
 
+void reinit_formula(Formula* f){
+    if(!f) return;
+
+    for (var i = 1; i <= f->nvars; i++) {
+        f->vars[i].assign = -1;
+    }
+    f->nassigned = 0;
+}
+
+void test_fonctionresolve(Formula *f){
+    fonctionresolve(f);
+    if (formula_eval(f)) {
+        for (var i = 1; i <= f->nvars; i++) {
+            printf("x %d=%d ", i, f->vars[i].assign);
+        }
+        printf("\n");
+    }
+}
 
 int main(int argc, char* argv[argc])
 {
@@ -719,31 +748,17 @@ int main(int argc, char* argv[argc])
 
     Formula* f = read_cnf(argv[1]);
 
-    // Résolution avec la méthode naïve
-    if (formula_naive_solve(f)) {
-        printf("Solution trouvée avec naive solve:\n");
-        for (var i = 1; i <= f->nvars; i++) {
-            printf("x %d=%d ", i, f->vars[i].assign);
-        }
-        printf("\n");
-    } else {                                                       //mehdi:vous verrez ici que pour neif et dpll c pas les memes assignations mais c normal
-        printf("Formule insatisfiable avec naive solve\n");        //la sol n'est pas unique
-    }
+    printf("Formule lue: %zu variables, %zu clauses\n", f->nvars, f->nclauses);
+
+
+    //Résolution avec la méthode naïve
+    //test_naive(f);
 
     // Réinitialiser les assignations avant de tester la méthode resolve;
-    for (var i = 1; i <= f->nvars; i++) {
-        f->vars[i].assign = -1;
-    }
-    f->nassigned = 0;
+    reinit_formula(f);
 
-    // Résolution avec fonction resolve
-    printf(" avec DPLL\n");
-    fonctionresolve(f);
-    printf("Assignations après fonctionresolve:\n");
-    for (var i = 1; i <= f->nvars; i++) {
-        printf("x %d=%d ", i, f->vars[i].assign);
-    }
-    printf("\n");
+    //Résolution avec la méthode fonctionresolve
+    test_fonctionresolve(f);
 
     formula_free(f);
     return 0;

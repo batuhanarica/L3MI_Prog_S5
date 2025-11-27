@@ -537,6 +537,8 @@ void backtrack(Formula* f, var v) {
 
 
 void fonctionresolve(Formula* f) {
+    //TODO:Check why function doesnt give the right result
+    
     if (!f) {
         printf("Error: formule NULL\n");
         return;
@@ -725,8 +727,8 @@ int main(int argc, char* argv[argc]){
 
     Formula* f = read_cnf(argv[1]);
 
-    //printf("Testing naive SAT solver:\n");
-    //test_satnaive(f);
+    printf("Testing naive SAT solver:\n");
+    test_satnaive(f);
 
     
     printf("\n");

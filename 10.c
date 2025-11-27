@@ -307,7 +307,34 @@ bool assign(Formula* f, var v, bool value){
     return true;
 };
 
-bool formula_naive_solve(Formula* f);
+bool formula_naive_solve(Formula* f){
+     //Check if f is NULL
+    if(!f){perror("ERROR: Formula nulle");return false;}
+
+    for (uint64_t i = 0; i < (1ULL << f->nvars); i++) {
+        //printf("Trying assignment %llu\n", i);
+
+
+        //Reset assignments
+        f->nassigned = 0;
+        for (size_t j = 0; j <= f->nvars; j++) {
+            f->vars[j].assign = -1;
+        }
+
+        //Assign values to variables based on bits of i
+        for(size_t v = 1 ; v <= f->nvars ; v++){
+            bool value = (i & (1ULL << (v - 1))) != 0;
+            if(!assign(f, v, value)){
+                perror("Conflict in assignment\n");
+                return false;
+            }
+            if(formula_eval(f)){
+                return true; //Formula is satisfied
+            }
+        }
+    }
+    return false; //No satisfying assignment found
+};
 
 
 
@@ -665,25 +692,55 @@ Formula* read_cnf(const char* fname)
 }
 
 
-
-
-int main(int argc, char* argv[argc])
-{
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s test.cnf\n", argv[0]);
-        return 1;
-    }
-    Formula* f = read_cnf(argv[1]);
-    
+void test_functionresolve(Formula* f){
     fonctionresolve(f);
     printf("Assignations:\n");
+    for (var i = 1; i<= f->nvars; i++) {
+        printf("x %d=%d ", i, f->vars[i].assign);
+    }
+    printf("\n"); 
+}
+
+void test_satnaive(Formula* f){
+    bool res = formula_naive_solve(f);
+    if(res){
+        printf("Formule satisfiable !\n");
+        printf("Assignations:\n");
         for (var i = 1; i <= f->nvars; i++) {
             printf("x %d=%d ", i, f->vars[i].assign);
+        }
+        printf("\n");
+    } else {
+        printf("Formule insatisfiable\n");
     }
-printf("\n");
+}
 
+
+
+int main(int argc, char* argv[argc]){
+    if(argc != 2){
+        printf("Usage: %s <cnf_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    Formula* f = read_cnf(argv[1]);
+
+    //printf("Testing naive SAT solver:\n");
+    //test_satnaive(f);
+
+    
+    printf("\n");
+    printf("--------------------------------------------------\n\n");
 
     formula_free(f);
-    return 0;
+
+    f = read_cnf(argv[1]);
+
+    printf("Testing DPLL SAT solver:\n");
+    test_functionresolve(f);
+
+    formula_free(f);
+
+    return EXIT_SUCCESS;
 }
 
